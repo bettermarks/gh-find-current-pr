@@ -11,7 +11,6 @@ PR.
 
 Additionnaly, `title` and `body` outputs are available as well to get the respective title and body of the PR.
 If the PR can be resolved, all labels will be present in the output:
-- as `labels` being an array of all label names
 - as `label_<name>` and set to `true`
 
 ## Usage
@@ -20,7 +19,7 @@ If the PR can be resolved, all labels will be present in the output:
     steps:
       - uses: actions/checkout@v1
       # Find the PR associated with this push, if there is one.
-      - uses: jwalton/gh-find-current-pr@v1
+      - uses: bettermarks/gh-find-current-pr@bettermarks
         id: findPr
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -28,5 +27,5 @@ If the PR can be resolved, all labels will be present in the output:
       - run: echo "Your PR is ${PR}"
         if: success() && steps.findPr.outputs.number
         env:
-          PR: ${{ steps.findPr.outputs.pr }}
+          PR: ${{ steps.findPr.outputs.number }}
 ```

@@ -10,14 +10,20 @@ async function main() {
     const token = core.getInput('github-token', { required: true });
     const sha = core.getInput('sha');
 
-    const client = new GitHub(token, {});
-    const result = await client.repos.listPullRequestsAssociatedWithCommit({
-        owner: context.repo.owner,
-        repo: context.repo.repo,
-        commit_sha: sha || context.sha,
-    });
-
-    const pr = result.data.length > 0 && result.data[0];
+    let pr;
+    console.log('context.payload', JSON.stringify(context));
+    if (context.payload.pull_request) {
+        pr = context.payload.pull_request;
+    } else {
+        const client = new GitHub(token, {});
+        const result = await client.repos.listPullRequestsAssociatedWithCommit({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            commit_sha: sha || context.sha,
+        });
+        console.log('response', JSON.stringify(result));
+        pr = result.data.find(it => it.state === 'open')
+    }
 
     set('pr', pr && pr.number || '');
     set('number', pr && pr.number || '');

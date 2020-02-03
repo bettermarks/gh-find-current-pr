@@ -1,6 +1,11 @@
 const core = require('@actions/core');
 const { GitHub, context } = require('@actions/github');
 
+const set = (key, value) => {
+    console.log('setting', key, 'to', JSON.stringify(value))
+    core.setOutput(key, value)
+}
+
 async function main() {
     const token = core.getInput('github-token', { required: true });
     const sha = core.getInput('sha');
@@ -14,13 +19,13 @@ async function main() {
 
     const pr = result.data.length > 0 && result.data[0];
 
-    core.setOutput('pr', pr && pr.number || '');
-    core.setOutput('number', pr && pr.number || '');
-    core.setOutput('title', pr && pr.title || '');
-    core.setOutput('body', pr && pr.body || '');
+    set('pr', pr && pr.number || '');
+    set('number', pr && pr.number || '');
+    set('title', pr && pr.title || '');
+    set('body', pr && pr.body || '');
     if (pr && pr.labels) {
-        core.setOutput('labels', pr.labels.map(label => label.name));
-        pr.labels.forEach((label) => core.setOutput(
+        set('labels', pr.labels.map(label => label.name));
+        pr.labels.forEach((label) => set(
             `label_${label.name}`, true
         ));
     }

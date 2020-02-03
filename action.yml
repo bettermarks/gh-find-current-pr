@@ -4,8 +4,13 @@ description: Find a PR associated with the current commit.
 inputs:
   github-token:
     description: The GitHub token used to create an authenticated client.
+    required: true
   sha:
-    description: Sha to get PR for.  Defaults to current sha.
+    description: Sha to get PR for. Defaults to current sha.
+    required: false
+  required:
+    description: Should the action fail if the PR can not be resolved?
+    default: ''
     required: false
 outputs:
   pr:
@@ -16,6 +21,8 @@ outputs:
     description: The PR's title if the PR was found
   body:
     description: The PR's body if the PR was found
+  label_NAME:
+    description: Each label existing on the PR when the check is executed, will have this boolean flag
 runs:
   using: node12
   main: 'main.js'

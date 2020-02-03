@@ -2,38 +2,40 @@ const core = require('@actions/core');
 const { GitHub, context } = require('@actions/github');
 
 const set = (key, value) => {
-    console.log('setting', key, 'to', JSON.stringify(value))
-    core.setOutput(key, value)
-}
+    console.log('setting', key, 'to', JSON.stringify(value));
+    core.setOutput(key, value);
+};
 
 async function main() {
-    const token = core.getInput('github-token', { required: true });
-    const sha = core.getInput('sha');
-
-    let pr;
-    console.log('context.payload', JSON.stringify(context));
-    if (context.payload.pull_request) {
-        pr = context.payload.pull_request;
-    } else {
+    const required = JSON.parse(core.getInput('required'));
+    let pr = context.payload.pull_request;
+    if (!pr) {
+        console.log(
+            'context.payload.pull_request not available, context:',
+            JSON.stringify(context)
+        );
+        const token = core.getInput('github-token', { required: true });
+        const sha = core.getInput('sha');
         const client = new GitHub(token, {});
-        const result = await client.repos.listPullRequestsAssociatedWithCommit({
+        const response = await client.repos.listPullRequestsAssociatedWithCommit({
             owner: context.repo.owner,
             repo: context.repo.repo,
             commit_sha: sha || context.sha,
         });
-        console.log('response', JSON.stringify(result));
-        pr = result.data.find(it => it.state === 'open')
+        console.log('response', JSON.stringify(response));
+        pr = response.data.find(it => it.state === 'open');
+    }
+    if (required && !pr) {
+        throw new Error('PR could not be resolved.');
     }
 
-    set('pr', pr && pr.number || '');
-    set('number', pr && pr.number || '');
-    set('title', pr && pr.title || '');
-    set('body', pr && pr.body || '');
+    set('number', (pr && pr.number) || '');
+    set('title', (pr && pr.title) || '');
+    set('body', (pr && pr.body) || '');
+    // the following has not been tested, but could work:
+    // set('labels', pr && pr.labels ? pr.labels.map(label => label.name) : []);
     if (pr && pr.labels) {
-        set('labels', pr.labels.map(label => label.name));
-        pr.labels.forEach((label) => set(
-            `label_${label.name}`, true
-        ));
+        pr.labels.forEach(label => set(`label_${label.name}`, true));
     }
 }
 

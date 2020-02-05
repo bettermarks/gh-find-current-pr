@@ -9,7 +9,11 @@ const set = (key, value) => {
 async function main() {
     const required = JSON.parse(core.getInput('required'));
     let pr = context.payload.pull_request;
-    if (!pr && context.payload.ref === `refs/heads/${context.payload.repository?.default_branch}`) {
+    if (
+        !pr
+        && context.payload.repository
+        && context.payload.ref === `refs/heads/${context.payload.repository.default_branch}`
+    ) {
         console.log('Action was triggered on the default branch, so there will not be a PR');
         return;
     }

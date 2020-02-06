@@ -1,36 +1,37 @@
-const core = require('@actions/core');
-const { GitHub, context } = require('@actions/github');
 
-const set = (key, value) => {
-    console.log('setting', key, 'to', JSON.stringify(value));
-    core.setOutput(key, value);
-};
 
-async function main() {
-    const required = JSON.parse(core.getInput('required'));
-    let pr = context.payload.pull_request;
+async function run(
+    { GitHub, context } = require('@actions/github'),
+    core = require('@actions/core'),
+    log = console.log,
+    set = (key, value) => {
+        log('setting', key, 'to', JSON.stringify(value));
+        core.setOutput(key, value);
+    },
+    client = new GitHub(core.getInput('github-token', { required: true }), {})
+) {
+    const {payload, repo, sha} = context;
+    const required = JSON.parse(core.getInput('required') || 'false');
+    let pr = payload.pull_request;
     if (
         !pr
-        && context.payload.repository
-        && context.payload.ref === `refs/heads/${context.payload.repository.default_branch}`
+        && payload.repository
+        && payload.ref === `refs/heads/${payload.repository.default_branch}`
     ) {
-        console.log('Action was triggered on the default branch, so there will not be a PR');
+        log('Action was triggered on the default branch, so there will not be a PR');
         return;
     }
     if (!pr) {
-        console.log(
-            'context.payload.pull_request not available, context:',
+        log(
+            'payload.pull_request not available, context:',
             JSON.stringify(context)
         );
-        const token = core.getInput('github-token', { required: true });
-        const sha = core.getInput('sha');
-        const client = new GitHub(token, {});
         const response = await client.repos.listPullRequestsAssociatedWithCommit({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            commit_sha: sha || context.sha,
+            owner: repo.owner,
+            repo: repo.repo,
+            commit_sha: sha || core.getInput('sha'),
         });
-        console.log('response', JSON.stringify(response));
+        log('response', JSON.stringify(response));
         pr = response.data.find(it => it.state === 'open');
     }
     if (required && !pr) {
@@ -46,5 +47,8 @@ async function main() {
         pr.labels.forEach(label => set(`label_${label.name}`, true));
     }
 }
-
-main().catch(err => core.setFailed(err.message));
+if (module === require.main) {
+    run().catch(err => core.setFailed(err.message));
+} else {
+    module.exports = {run}
+}

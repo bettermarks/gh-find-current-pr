@@ -1,5 +1,3 @@
-
-
 async function run(
     { GitHub, context } = require('@actions/github'),
     core = require('@actions/core'),
@@ -10,22 +8,19 @@ async function run(
     },
     client = new GitHub(core.getInput('github-token', { required: true }), {})
 ) {
-    const {payload, repo, sha} = context;
+    const { payload, repo, sha } = context;
     const required = JSON.parse(core.getInput('required') || 'false');
     let pr = payload.pull_request;
     if (
-        !pr
-        && payload.repository
-        && payload.ref === `refs/heads/${payload.repository.default_branch}`
+        !pr &&
+        payload.repository &&
+        payload.ref === `refs/heads/${payload.repository.default_branch}`
     ) {
         log('Action was triggered on the default branch, so there will not be a PR');
         return;
     }
     if (!pr) {
-        log(
-            'payload.pull_request not available, context:',
-            JSON.stringify(context)
-        );
+        log('payload.pull_request not available, context:', JSON.stringify(context));
         const response = await client.repos.listPullRequestsAssociatedWithCommit({
             owner: repo.owner,
             repo: repo.repo,
@@ -35,7 +30,7 @@ async function run(
         pr = response.data.find(it => it.state === 'open');
     }
     if (required && !pr) {
-        throw new Error('PR could not be resolved.');
+        core.setFailed('PR could not be resolved.');
     }
 
     set('number', (pr && pr.number) || '');
@@ -47,8 +42,13 @@ async function run(
         pr.labels.forEach(label => set(`label_${label.name}`, true));
     }
 }
+
+const main = (github = require('@actions/github'), core = require('@actions/core')) =>
+    run(github, core).catch(err => core.setFailed(err.message));
+
 if (module === require.main) {
-    run().catch(err => core.setFailed(err.message));
+    // noinspection JSIgnoredPromiseFromCall
+    main();
 } else {
-    module.exports = {run}
+    module.exports = { main, run };
 }

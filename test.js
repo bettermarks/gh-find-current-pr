@@ -77,6 +77,31 @@ test('should exit early when running on default branch', async t => {
     td.verify(log(td.matchers.contains('default branch')));
 });
 
+test('should resolve PR for status events', async t => {
+    const core = fakeCore();
+    const { GitHub, context } = fakeGitHub({
+        payload: {
+            sha: 'BRANCH_SHA'
+        },
+        eventName: 'status',
+        sha: 'MASTER_SHA'
+    });
+    td.when(
+        GitHub.prototype.repos.listPullRequestsAssociatedWithCommit({
+            ...context.repo,
+            commit_sha: 'BRANCH_SHA'
+        })
+    ).thenResolve({
+        status: 200,
+        url: 'https://api.github.com/repos/owner/repo/commits/BRANCH_SHA/pulls',
+        data: [{ state: 'open', ...fakePR('autoX') }],
+    });
+
+    await run({ GitHub, context }, core);
+
+    t.hasStrict(core.output, {label_autoX: true});
+});
+
 test('run should call core.setFailed when pr can not be resolved but is required', async t => {
     const core = fakeCore({ required: true });
     const { GitHub, context } = fakeGitHub();

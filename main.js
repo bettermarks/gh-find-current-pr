@@ -8,17 +8,24 @@ async function run(
     },
     client = new GitHub(core.getInput('github-token', { required: true }), {})
 ) {
-    const { eventName, payload, repo, sha } = context;
+    const { eventName, payload, ref, repo, sha } = context;
     const required = JSON.parse(core.getInput('required') || 'false');
     let pr = payload.pull_request;
+
     if (
         !pr &&
         payload.repository &&
-        payload.ref === `refs/heads/${payload.repository.default_branch}` &&
-        eventName !== 'status'
+        ref === `refs/heads/${payload.repository.default_branch}`
     ) {
-        log('Action was triggered on the default branch, so there will not be a PR');
-        return;
+        console.error('reached', eventName, sha, payload.sha);
+        if (eventName !== 'status') {
+            log('Action was triggered on the default branch, so there will not be a PR');
+            return;
+        }
+        if (eventName === 'status' && sha === payload.sha) {
+            log('Action was triggered for status on the default branch, so there will not be a PR');
+            return;
+        }
     }
     if (!pr) {
         log('payload.pull_request not available, context:', JSON.stringify(context));

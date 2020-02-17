@@ -67,8 +67,8 @@ test('should exit early when running on default branch', async t => {
                 repository: {
                     default_branch: 'master',
                 },
-                ref: 'refs/heads/master',
             },
+            ref: 'refs/heads/master',
         }),
         fakeCore(),
         log
@@ -81,15 +81,15 @@ test('should resolve PR for status events', async t => {
     const core = fakeCore();
     const { GitHub, context } = fakeGitHub({
         payload: {
-            sha: 'BRANCH_SHA'
+            sha: 'BRANCH_SHA',
         },
         eventName: 'status',
-        sha: 'MASTER_SHA'
+        sha: 'MASTER_SHA',
     });
     td.when(
         GitHub.prototype.repos.listPullRequestsAssociatedWithCommit({
             ...context.repo,
-            commit_sha: 'BRANCH_SHA'
+            commit_sha: 'BRANCH_SHA',
         })
     ).thenResolve({
         status: 200,
@@ -99,7 +99,29 @@ test('should resolve PR for status events', async t => {
 
     await run({ GitHub, context }, core);
 
-    t.hasStrict(core.output, {label_autoX: true});
+    t.hasStrict(core.output, { label_autoX: true });
+});
+
+test('should not fail on master for status events if PR can not be resolved, even when required', async t => {
+    const core = fakeCore({ required: true });
+    const { GitHub, context } = fakeGitHub({
+        payload: {
+            repository: {
+                default_branch: 'master',
+            },
+            sha: 'MASTER_SHA',
+        },
+        eventName: 'status',
+        sha: 'MASTER_SHA',
+        ref: 'refs/heads/master',
+    });
+    const log = td.func('log');
+
+    await run({ GitHub, context }, core, log);
+
+    td.verify(
+        log('Action was triggered for status on the default branch, so there will not be a PR')
+    );
 });
 
 test('run should call core.setFailed when pr can not be resolved but is required', async t => {
@@ -131,7 +153,7 @@ test('run should correctly resolve PR from API call', async t => {
 
     await run({ GitHub, context }, core);
 
-    t.hasStrict(core.output, {label_Foo: true});
+    t.hasStrict(core.output, { label_Foo: true });
 });
 
 test('main should call core.setFailed when GitHub rejects', async t => {
